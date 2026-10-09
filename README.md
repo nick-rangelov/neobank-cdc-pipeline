@@ -1,55 +1,37 @@
-# Neobank Data Pipeline
+# Neobank CDC Pipeline (learning project)
 
-An end-to-end ELT pipeline built on AWS using **synthetic** neobank data (customers, accounts, transactions).
+A learning project about keeping a warehouse in sync with a source that keeps changing:
+change data capture (CDC), incremental loads and backfills, using **synthetic** customer data.
 
-> All data in this repository is randomly generated. It contains no real customer data and is not derived from any employer's systems.
+> All data in this repository is randomly generated. It contains no real customer data and
+> is not derived from any employer's systems.
 
-## Architecture
+## Why
 
-```
-Raw CSV files  ->  Amazon S3 (data lake)  ->  Amazon Redshift Serverless (warehouse)  ->  dbt (transformations)
-```
+A first project (batch ELT with S3, Redshift and dbt) loaded a one-time snapshot. Real
+pipelines have to handle changes arriving continuously: duplicates, out-of-order events,
+late files, deletes, schema changes and the handover from a historical backfill to a live
+stream. This project builds that on a small scale, with a known correct answer to test against.
 
-| Layer | Tool | Purpose |
-|---|---|---|
-| Landing zone | Amazon S3 | Stores raw CSV files |
-| Warehouse | Amazon Redshift Serverless | Holds raw tables loaded with `COPY` |
-| Transformation | dbt Core | Staging -> intermediate -> mart models, with data-quality tests |
+## Status
 
-## Dataset
+- [x] Event design ([docs/event_design.md](docs/event_design.md))
+- [x] Synthetic CDC event generator (snapshot, change files, injected edge cases)
+- [x] Reference check of the correctness rule
+- [ ] Load raw events into the warehouse (append-only, idempotent)
+- [ ] dbt: dedupe, incremental model, history snapshot
+- [ ] Reconciliation and freshness checks
+- [ ] Scheduling and a backfill experiment
+- [ ] PII handling layer
 
-Generated with `generate_data.py` (fixed random seed, so output is reproducible):
+## Quick start
 
-- `customers` — 500 rows
-- `accounts` — ~760 rows, each linked to a customer
-- `transactions` — ~33,000 rows, each linked to an account, spanning 12 months
-
-## Project status
-
-- [x] Synthetic data generator
-- [ ] S3 bucket and raw file upload
-- [ ] Redshift Serverless setup
-- [ ] Raw tables loaded with `COPY`
-- [ ] dbt project: staging models
-- [ ] dbt project: mart model (monthly transaction summary per customer segment)
-- [ ] dbt tests (unique, not_null, relationships)
-- [ ] Architecture diagram and sample output
-
-## How to reproduce
-
-_To be completed as the project progresses._
-
-### 1. Generate the data
+Standard library only, no installs needed:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install faker
-python generate_data.py
+python3 generate_events.py --out data --customers 500 --days 10 --seed 42
+python3 reference_apply.py --data data           # correct rule: PASS
+python3 reference_apply.py --data data --naive   # arrival order, no dedupe: FAIL
 ```
 
-This creates three CSV files in a local `data/` folder.
-
-## What I learned
-
-_To be completed at the end of the project._
+The same seed always produces identical output.

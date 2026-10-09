@@ -218,3 +218,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-specific
+data/
+.env
+profiles.yml
+*.pem
+target/
+dbt_packages/
+logs/

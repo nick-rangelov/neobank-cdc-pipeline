@@ -18,7 +18,7 @@ stream. This project builds that on a small scale, with a known correct answer t
 - [x] Event design ([docs/event_design.md](docs/event_design.md))
 - [x] Synthetic CDC event generator (snapshot, change files, injected edge cases)
 - [x] Reference check of the correctness rule
-- [ ] Load raw events into the warehouse (append-only, idempotent)
+- [x] Load raw events into the warehouse (append-only, idempotent)
 - [ ] dbt: dedupe, incremental model, history snapshot
 - [ ] Reconciliation and freshness checks
 - [ ] Scheduling and a backfill experiment
@@ -35,3 +35,20 @@ python3 reference_apply.py --data data --naive   # arrival order, no dedupe: FAI
 ```
 
 The same seed always produces identical output.
+
+## Loading into Redshift
+
+Raw tables are defined in `redshift/cdc_raw_tables.sql`. Copy the generated files to S3
+(excluding `expected/`), then:
+
+    pip install boto3
+    export CDC_BUCKET=<your-bucket>
+    python3 load_raw.py                        # loads every file not yet in raw_cdc.load_log
+    python3 -m unittest discover -s tests -v   # logic tests with fake AWS clients
+
+Each file is loaded in a single transaction: COPY into a temp stage table, insert into the
+raw table with its source file name, write the load log entry. A failed load leaves nothing
+behind, and a re-run skips files that are already loaded.
+
+Limits: files are loaded one at a time, so two runs at once are not safe. Unknown columns
+fail on purpose instead of being loaded silently.

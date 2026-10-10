@@ -67,9 +67,9 @@ data/
 
 ## 7. Open design questions
 
-- How should deletes appear downstream: removed rows, or a soft-delete flag with history?
-- Where should deduplication live: in the load step or in dbt staging?
-- How do I prove idempotency with a test?
+- Raw data stays append only, the current customers table drops deleted customers and the history keeps them with a deleted flag and date.
+- Append whatever data arrives and record each file in a load log. The deduplication will be done in dbt staging with row_number(), where it's visible, tested and possibly replayed.
+- To prove idempotency, I will load the same day twice and compare row counts and checksum of the final table. A file that's already in the log must be refused and a full rebuild from the raw events must equal the incremental result.
 
 ## 8. Out of scope for now
 

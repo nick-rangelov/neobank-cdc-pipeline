@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw_cdc
+    description: Append-only raw tables loaded from S3 by load_raw.py
+    schema: raw_cdc
+    tables:
+      - name: customers_snapshot
+      - name: customer_events
+      - name: load_log

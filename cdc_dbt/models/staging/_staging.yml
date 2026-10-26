@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_customers_snapshot
+    description: Customers as of the snapshot.
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_customer_events
+    description: Change events, one row per seq (repeated deliveries removed).
+    columns:
+      - name: seq
+        data_tests:
+          - unique
+          - not_null
+      - name: op
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['I', 'U', 'D']
+      - name: customer_id
+        data_tests:
+          - not_null

@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: customers_current
+    description: Current state of every customer (latest version, deletes removed).
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+      - name: email
+        data_tests:
+          - not_null
+      - name: segment
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['retail', 'premium', 'business']
+
+  - name: dim_customer_history
+    description: One row per customer version with the seq range in which it was valid.
+    columns:
+      - name: customer_version_id
+        data_tests:
+          - unique
+          - not_null

@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_customer_versions
+    description: Snapshot rows plus all post-snapshot events, one row per version.
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+      - name: op
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['S', 'I', 'U', 'D']

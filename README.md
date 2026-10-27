@@ -19,7 +19,7 @@ stream. This project builds that on a small scale, with a known correct answer t
 - [x] Synthetic CDC event generator (snapshot, change files, injected edge cases)
 - [x] Reference check of the correctness rule
 - [x] Load raw events into the warehouse (append-only, idempotent)
-- [ ] dbt: dedupe, incremental model, history snapshot
+- [x] dbt: dedupe, current-state model, history table, incremental model, correctness tests
 - [ ] Reconciliation and freshness checks
 - [ ] Scheduling and a backfill experiment
 - [ ] PII handling layer
@@ -52,3 +52,27 @@ behind, and a re-run skips files that are already loaded.
 
 Limits: files are loaded one at a time, so two runs at once are not safe. Unknown columns
 fail on purpose instead of being loaded silently.
+
+## dbt project (`cdc_dbt/`)
+
+Layers: **staging** (deduplicate events by `seq`), **intermediate** (snapshot rows plus events
+after `snapshot_seq`), **marts**: `customers_current` (full rebuild), `customers_current_incremental`
+(processes only newly loaded events) and `dim_customer_history`.
+
+    cd cdc_dbt
+    export REDSHIFT_PASSWORD='<your-password>'   # never commit this
+    dbt build
+
+Connection settings live in `~/.dbt/profiles.yml` (profile `cdc_dbt`), outside the repo.
+
+**Correctness:** `assert_customers_current_matches_expected` compares `customers_current` with
+`seeds/expected_customers.csv`, the ground truth written by `generate_events.py`, and
+`assert_incremental_matches_full_rebuild` checks that the incremental table equals a full rebuild.
+Regenerate the seed whenever the generator's seed or size changes.
+
+**Incremental design:** the watermark is load time (`_loaded_at`), not event time, so late events are
+picked up. The winning version is decided by `seq`. Deleted customers stay as tombstone rows
+(`is_deleted`), so late older events cannot bring them back. Snapshot customers that are missing
+are added automatically on later runs.
+
+The dbt var `snapshot_seq` must equal the value in `data/snapshot/snapshot_manifest.json`.

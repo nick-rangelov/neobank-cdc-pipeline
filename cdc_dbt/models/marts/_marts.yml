@@ -24,3 +24,19 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: customers_current_incremental
+    description: >
+      Incremental customer state. Keeps deleted customers as tombstones (is_deleted) and
+      records the seq and load time that produced each row.
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+      - name: last_seq
+        data_tests:
+          - not_null
+      - name: is_deleted
+        data_tests:
+          - not_null

@@ -20,7 +20,7 @@ stream. This project builds that on a small scale, with a known correct answer t
 - [x] Reference check of the correctness rule
 - [x] Load raw events into the warehouse (append-only, idempotent)
 - [x] dbt: dedupe, current-state model, history table, incremental model, correctness tests
-- [ ] Reconciliation and freshness checks
+- [x] Reconciliation and freshness checks
 - [ ] Scheduling and a backfill experiment
 - [ ] PII handling layer
 
@@ -76,3 +76,16 @@ picked up. The winning version is decided by `seq`. Deleted customers stay as to
 are added automatically on later runs.
 
 The dbt var `snapshot_seq` must equal the value in `data/snapshot/snapshot_manifest.json`.
+
+## Reconciliation and freshness
+
+| Check | What it proves |
+|---|---|
+| `assert_load_log_matches_raw_rows` | Rows per file in the raw tables equal the load log, so no load was lost or doubled |
+| `unique_recon_files_source_file` | Each file is logged once |
+| `assert_no_seq_gaps` (warning) | No change is missing; a gap means a late or lost file |
+| `assert_customer_count_balances` | Snapshot customers + inserts - deletes = customers now |
+| `dbt source freshness` | The data was loaded recently |
+| `python3 load_raw.py --check` | Every file in S3 is in the load log and every logged file exists |
+
+`recon_summary` shows the counts at each step of the pipeline in one view.

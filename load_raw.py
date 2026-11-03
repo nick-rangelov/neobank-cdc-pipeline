@@ -18,6 +18,7 @@ Usage:
     python3 load_raw.py --dry-run --limit 2     # show what would run, change nothing
     python3 load_raw.py --limit 3               # load the first 3 new files
     python3 load_raw.py                         # load everything not loaded yet
+    python3 load_raw.py --check                 # compare S3 with the load log (read-only)
 """
 import argparse
 import os
@@ -168,6 +169,20 @@ def load_all(s3, rsd, cfg, dry_run=False, limit=None, out=print):
     return summary
 
 
+def check_files(s3, rsd, cfg, out=print):
+    """Reconcile the files in S3 with the load log. Read-only: nothing is loaded or changed."""
+    keys = list_csv_keys(s3, cfg.bucket, cfg.prefix)
+    loaded = fetch_loaded_files(rsd, cfg)
+    not_loaded = [key for key in keys if key not in loaded]
+    missing_in_s3 = sorted(loaded - set(keys))
+    for key in not_loaded:
+        out(f"NOT LOADED  {key}")
+    for key in missing_in_s3:
+        out(f"IN LOG BUT NOT IN S3  {key}")
+    return {"in_s3": len(keys), "logged": len(loaded),
+            "not_loaded": len(not_loaded), "missing_in_s3": len(missing_in_s3)}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -180,6 +195,8 @@ def main(argv=None):
     parser.add_argument("--redshift-region", default="us-east-1")
     parser.add_argument("--dry-run", action="store_true", help="print the plan, change nothing")
     parser.add_argument("--limit", type=int, default=None, help="load at most N new files")
+    parser.add_argument("--check", action="store_true",
+                        help="compare the files in S3 with the load log, change nothing; exit 1 if they differ")
     args = parser.parse_args(argv)
     if not args.bucket:
         parser.error("--bucket (or the CDC_BUCKET environment variable) is required")
@@ -187,6 +204,10 @@ def main(argv=None):
     import boto3                               # imported here so the tests need no AWS libraries
     s3 = boto3.client("s3", region_name=args.bucket_region)
     rsd = boto3.client("redshift-data", region_name=args.redshift_region)
+    if args.check:
+        summary = check_files(s3, rsd, args)
+        print("check:", summary)
+        return 1 if (summary["not_loaded"] or summary["missing_in_s3"]) else 0
     summary = load_all(s3, rsd, args, dry_run=args.dry_run, limit=args.limit)
     print("summary:", summary)
     return 1 if summary["failed"] else 0

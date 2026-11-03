@@ -160,6 +160,34 @@ class LoaderTests(unittest.TestCase):
             self.assertTrue(batch[2].startswith("copy "))
             self.assertTrue(batch[-1].startswith("insert into raw_cdc.load_log"))
 
+    def test_check_is_clean_when_everything_is_loaded(self):
+        rsd = FakeRedshiftData(loaded=[k for k in OBJECTS if k.endswith(".csv")])
+        lines = []
+        result = load_raw.check_files(FakeS3(OBJECTS), rsd, CFG, out=lines.append)
+        self.assertEqual(result["not_loaded"], 0)
+        self.assertEqual(result["missing_in_s3"], 0)
+        self.assertEqual(lines, [])
+
+    def test_check_reports_files_that_are_not_loaded(self):
+        rsd = FakeRedshiftData(loaded=["cdc/snapshot/customers_snapshot.csv"])
+        lines = []
+        result = load_raw.check_files(FakeS3(OBJECTS), rsd, CFG, out=lines.append)
+        self.assertEqual(result["not_loaded"], 2)
+        self.assertTrue(all(line.startswith("NOT LOADED") for line in lines))
+
+    def test_check_reports_logged_files_missing_from_s3(self):
+        logged = [k for k in OBJECTS if k.endswith(".csv")] + ["cdc/events/dt=2026-02-05/customers_changes_001.csv"]
+        rsd = FakeRedshiftData(loaded=logged)
+        lines = []
+        result = load_raw.check_files(FakeS3(OBJECTS), rsd, CFG, out=lines.append)
+        self.assertEqual(result["missing_in_s3"], 1)
+        self.assertTrue(any(line.startswith("IN LOG BUT NOT IN S3") for line in lines))
+
+    def test_check_changes_nothing(self):
+        rsd = FakeRedshiftData()
+        load_raw.check_files(FakeS3(OBJECTS), rsd, CFG, out=lambda line: None)
+        self.assertEqual(rsd.batches, [])
+
 
 if __name__ == "__main__":
     unittest.main()

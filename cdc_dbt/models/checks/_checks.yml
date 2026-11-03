@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: recon_files
+    description: Rows per file in the raw tables versus the load log.
+    columns:
+      - name: source_file
+        description: Each file must appear exactly once, so a file logged twice is caught here.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: recon_seq_gaps
+    description: Ranges of missing seq values (empty when nothing is missing).
+
+  - name: recon_summary
+    description: Key counts at each step of the pipeline.

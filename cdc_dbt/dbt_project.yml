@@ -29,6 +29,9 @@ models:
     marts:
       +materialized: table
       +schema: marts
+    checks:
+      +materialized: view
+      +schema: checks
 
 seeds:
   cdc_dbt:

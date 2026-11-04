@@ -35,7 +35,7 @@ gap_at_start as (
         {{ var('snapshot_seq') }} + 1 as gap_from,
         lo - 1 as gap_to,
         lo - {{ var('snapshot_seq') }} - 1 as missing_seqs
-    from (select min(seq) as lo from delivered) b
+    from (select min(seq) as lo from delivered) as b
     where lo > {{ var('snapshot_seq') }} + 1
 
 )

@@ -24,6 +24,6 @@ select
     marketing_opt_in,
     seq as valid_from_seq,
     next_seq as valid_to_seq,
-    case when next_seq is null then true else false end as is_current
+    next_seq is null as is_current
 from with_next
 where op != 'D'

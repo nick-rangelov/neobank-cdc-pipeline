@@ -1,0 +1,72 @@
+name: CI
+
+# Runs on every pull request and on every push to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit tests (loader)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Run the loader unit tests
+        run: python -m unittest discover -s tests -v
+
+  sql-lint:
+    name: SQL lint (SQLFluff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install SQLFluff
+        run: pip install -r ci/requirements-lint.txt
+      - name: Lint the dbt models and tests
+        run: sqlfluff lint cdc_dbt/models cdc_dbt/tests
+
+  dbt-build:
+    name: dbt compile and build (DuckDB)
+    runs-on: ubuntu-latest
+    env:
+      DBT_DUCKDB_PATH: ${{ github.workspace }}/ci/ci.duckdb
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ci/requirements-dbt.txt
+      - name: Install dbt and DuckDB
+        run: pip install -r ci/requirements-dbt.txt
+      - name: Generate the synthetic CDC files
+        run: python generate_events.py --out data
+      - name: Check that the answer key in the repo matches the generator
+        run: diff data/expected/customers_expected.csv cdc_dbt/seeds/expected_customers.csv
+      - name: Load the files into DuckDB
+        run: python ci/load_duckdb.py --data data --db "$DBT_DUCKDB_PATH"
+      - name: dbt parse
+        working-directory: cdc_dbt
+        run: dbt parse --profiles-dir ../ci
+      - name: dbt compile
+        working-directory: cdc_dbt
+        run: dbt compile --profiles-dir ../ci
+      - name: dbt build (models, seed and all tests)
+        working-directory: cdc_dbt
+        run: dbt build --profiles-dir ../ci
+      - name: dbt source freshness
+        working-directory: cdc_dbt
+        run: dbt source freshness --profiles-dir ../ci

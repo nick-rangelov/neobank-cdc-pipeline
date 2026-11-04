@@ -34,7 +34,7 @@ with new_events as (
     where seq > {{ var('snapshot_seq') }}
     {% if is_incremental() %}
       and _loaded_at > coalesce(
-            (select max(last_loaded_at) from {{ this }}),
+            (select max(prev.last_loaded_at) from {{ this }} as prev),
             cast('1900-01-01' as timestamp)
           )
     {% endif %}
@@ -47,18 +47,18 @@ with new_events as (
 previous_state as (
 
     select
-        last_seq as seq,
-        case when is_deleted then 'D' else 'E' end as op,
-        customer_id,
-        first_name,
-        last_name,
-        email,
-        country,
-        segment,
-        marketing_opt_in,
-        last_loaded_at as loaded_at
-    from {{ this }}
-    where customer_id in (select customer_id from new_events)
+        prev.last_seq as seq,
+        case when prev.is_deleted then 'D' else 'E' end as op,
+        prev.customer_id,
+        prev.first_name,
+        prev.last_name,
+        prev.email,
+        prev.country,
+        prev.segment,
+        prev.marketing_opt_in,
+        prev.last_loaded_at as loaded_at
+    from {{ this }} as prev
+    where prev.customer_id in (select ne.customer_id from new_events as ne)
 
 ),
 
@@ -78,7 +78,7 @@ missing_baseline as (
         cast(null as varchar(10)) as marketing_opt_in,
         cast(null as timestamp) as loaded_at
     from {{ ref('stg_customers_snapshot') }}
-    where customer_id not in (select customer_id from {{ this }})
+    where customer_id not in (select prev.customer_id from {{ this }} as prev)
 
 ),
 
@@ -146,7 +146,7 @@ select
     segment,
     marketing_opt_in,
     seq as last_seq,
-    case when op = 'D' then true else false end as is_deleted,
+    (op = 'D') as is_deleted,
     last_loaded_at
 from ranked
 where version_rank = 1

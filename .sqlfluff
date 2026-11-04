@@ -1,0 +1,9 @@
+[sqlfluff]
+dialect = redshift
+templater = jinja
+max_line_length = 120
+# Relaxed on purpose:
+#   LT02, LT09, LT11, LT14  layout rules that only enforce a house style for indentation and line breaks
+#   ST06                    column order in the final select is chosen for readability
+#   AM04                    the tests use "select *" from other models on purpose
+exclude_rules = LT02, LT09, LT11, LT14, ST06, AM04

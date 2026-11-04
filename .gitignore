@@ -227,3 +227,7 @@ profiles.yml
 target/
 dbt_packages/
 logs/
+ci/ci.duckdb
+
+# The CI profile holds no secrets (a throwaway DuckDB file), so it is committed on purpose
+!ci/profiles.yml

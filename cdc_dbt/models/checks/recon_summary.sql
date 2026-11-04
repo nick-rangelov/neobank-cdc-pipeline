@@ -29,14 +29,68 @@ state as (
 
 )
 
-select 1 as step, 'raw event rows (all deliveries)' as metric, cast(total_rows as bigint) as value from raw_events
-union all select 2, 'distinct events (by seq)', cast(distinct_events as bigint) from raw_events
-union all select 3, 'repeated deliveries removed', cast(total_rows - distinct_events as bigint) from raw_events
-union all select 4, 'events after the snapshot', cast(events as bigint) from after_snapshot
-union all select 5, '  of which inserts', cast(inserts as bigint) from after_snapshot
-union all select 6, '  of which updates', cast(updates as bigint) from after_snapshot
-union all select 7, '  of which deletes', cast(deletes as bigint) from after_snapshot
-union all select 8, 'customers in the snapshot', cast(count(*) as bigint) from {{ ref('stg_customers_snapshot') }}
-union all select 9, 'customers now (full rebuild)', cast(count(*) as bigint) from {{ ref('customers_current') }}
-union all select 10, 'customers now (incremental table)', cast(customers as bigint) from state
-union all select 11, 'tombstones kept (deleted customers)', cast(tombstones as bigint) from state
+select
+    1 as step,
+    'raw event rows (all deliveries)' as metric,
+    cast(total_rows as bigint) as metric_value
+from raw_events
+union all
+select
+    2 as step,
+    'distinct events (by seq)' as metric,
+    cast(distinct_events as bigint) as metric_value
+from raw_events
+union all
+select
+    3 as step,
+    'repeated deliveries removed' as metric,
+    cast(total_rows - distinct_events as bigint) as metric_value
+from raw_events
+union all
+select
+    4 as step,
+    'events after the snapshot' as metric,
+    cast(events as bigint) as metric_value
+from after_snapshot
+union all
+select
+    5 as step,
+    '  of which inserts' as metric,
+    cast(inserts as bigint) as metric_value
+from after_snapshot
+union all
+select
+    6 as step,
+    '  of which updates' as metric,
+    cast(updates as bigint) as metric_value
+from after_snapshot
+union all
+select
+    7 as step,
+    '  of which deletes' as metric,
+    cast(deletes as bigint) as metric_value
+from after_snapshot
+union all
+select
+    8 as step,
+    'customers in the snapshot' as metric,
+    cast(count(*) as bigint) as metric_value
+from {{ ref('stg_customers_snapshot') }}
+union all
+select
+    9 as step,
+    'customers now (full rebuild)' as metric,
+    cast(count(*) as bigint) as metric_value
+from {{ ref('customers_current') }}
+union all
+select
+    10 as step,
+    'customers now (incremental table)' as metric,
+    cast(customers as bigint) as metric_value
+from state
+union all
+select
+    11 as step,
+    'tombstones kept (deleted customers)' as metric,
+    cast(tombstones as bigint) as metric_value
+from state

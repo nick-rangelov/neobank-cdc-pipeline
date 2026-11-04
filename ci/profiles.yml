@@ -1,0 +1,9 @@
+# dbt connection used only by CI: a throwaway local DuckDB file, so no credentials are needed.
+cdc_dbt:
+  target: ci
+  outputs:
+    ci:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'ci/ci.duckdb') }}"
+      schema: analytics_cdc
+      threads: 1

@@ -31,6 +31,6 @@ select
         when coalesce(r.raw_rows, 0) != l.logged_rows then 'row count differs'
         else 'ok'
     end as status
-from logged l
-full outer join raw_counts r
+from logged as l
+full outer join raw_counts as r
     on l.source_file = r.source_file

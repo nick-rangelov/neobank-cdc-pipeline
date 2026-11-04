@@ -1,5 +1,7 @@
 # Neobank CDC Pipeline (learning project)
 
+![CI](https://github.com/nick-rangelov/neobank-cdc-pipeline/actions/workflows/ci.yml/badge.svg)
+
 A learning project about keeping a warehouse in sync with a source that keeps changing:
 change data capture (CDC), incremental loads and backfills, using **synthetic** customer data.
 
@@ -21,6 +23,7 @@ stream. This project builds that on a small scale, with a known correct answer t
 - [x] Load raw events into the warehouse (append-only, idempotent)
 - [x] dbt: dedupe, current-state model, history table, incremental model, correctness tests
 - [x] Reconciliation and freshness checks
+- [x] CI with GitHub Actions (unit tests, SQL lint, dbt build on DuckDB)
 - [ ] Scheduling and a backfill experiment
 - [ ] PII handling layer
 
@@ -89,3 +92,15 @@ The dbt var `snapshot_seq` must equal the value in `data/snapshot/snapshot_manif
 | `python3 load_raw.py --check` | Every file in S3 is in the load log and every logged file exists |
 
 `recon_summary` shows the counts at each step of the pipeline in one view.
+
+## Continuous integration
+
+Every pull request and every push to main runs three jobs (GitHub Actions, `.github/workflows/ci.yml`):
+
+| Job | What it does |
+|---|---|
+| Unit tests | Runs the loader's unit tests |
+| SQL lint | SQLFluff (Redshift dialect) on the dbt models and tests |
+| dbt compile and build | Generates the synthetic files, loads them into DuckDB, then runs `dbt parse`, `dbt compile`, `dbt build` (models, seed and all tests) and `dbt source freshness` |
+
+CI uses DuckDB so that no cloud credentials are needed; in real use the same dbt project runs on Redshift.

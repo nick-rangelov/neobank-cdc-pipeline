@@ -227,3 +227,4 @@ profiles.yml
 target/
 dbt_packages/
 logs/
+ci/ci.duckdb
